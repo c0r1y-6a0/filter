@@ -15,10 +15,12 @@ public class PostProcessingBlur : MonoBehaviour
     public float GaussianDelta;
 
     [Header("Bilateral")]
+    [Range(0, 0.2f)]
     public float Sharpness;
 
     RenderTexture rt;
     Material Mat;
+    E_FILTERMODE PreMode;
     // Start is called before the first frame update
     void Start()
     {
@@ -41,6 +43,7 @@ public class PostProcessingBlur : MonoBehaviour
     {
         Mat = new Material(Shader.Find("Hidden/Bilateral"));
         UpdateBilateralMat();
+        PreMode = E_FILTERMODE.Bilateral;
     }
 
     void UpdateBilateralMat()
@@ -129,6 +132,12 @@ public class PostProcessingBlur : MonoBehaviour
     {
         Mat = new Material(Shader.Find("Hidden/Gaussian"));
         UpdateGaussianParamter();
+        PreMode = E_FILTERMODE.Gaussian;
+    }
+
+    bool ShouldCreateNewMat()
+    {
+        return m_prevSampleCount != SampleCount || m_prevGaussianDelta != GaussianDelta || PreMode != Mode;
     }
 
     int m_prevSampleCount = 0;
@@ -139,14 +148,14 @@ public class PostProcessingBlur : MonoBehaviour
         switch(Mode)
         {
             case E_FILTERMODE.Bilateral:
-                if (m_prevSampleCount != SampleCount || m_prevGaussianDelta != GaussianDelta)
+                if (ShouldCreateNewMat())
                 {
                     CreateNewBilateralMat();
                 }
                 Mat.SetFloat("_BilateralSharpness", Sharpness);
                 break;
             case E_FILTERMODE.Gaussian:
-                if (m_prevSampleCount != SampleCount || m_prevGaussianDelta != GaussianDelta)
+                if (ShouldCreateNewMat())
                 {
                     CreateNewGaussianMat();
                 }

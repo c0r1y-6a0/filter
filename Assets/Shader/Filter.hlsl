@@ -71,34 +71,34 @@ half BilateralDepthWeight(float d1, float d2, float sharpness, int GaussianIndex
     return exp(-abs(d1 - d2) * _ProjectionParams.z * sharpness) * Gaussian_Weight[GaussianIndex];
 }
 
-void GetWeightColor(float depth0, sampler2D target, half2 uv, fixed2 dir, float2 texelSize, float sharpness, int i, inout float totalWeight, inout float4 totalColor)
+void GetWeightColor(float depth0, sampler2D target, half2 uv, fixed2 dir, float2 texelSize, float sharpness, int i, inout float totalWeight, inout fixed4 totalColor)
 {
     uv = uv + dir * texelSize * i;
-    float color = tex2D(target, uv);
+    fixed4 sampleColor = tex2D(target, uv);
     float3 normal;
     float depth = GetViewPosAndNormal(uv, normal);
     float weight = BilateralDepthWeight(depth, depth0, sharpness, i);
     totalWeight += weight;
-    totalColor += color * weight;
+    totalColor += (sampleColor * weight);
 }
 
 fixed4 BilateralDepth(sampler2D target, half2 uv, fixed2 dir, float2 texelSize, int sample, float sharpness)
 {
-    fixed4 color = tex2D(target, uv);
-    float3 normal;
-    float depth = GetViewPosAndNormal(uv, normal);
-    float weight0 = BilateralColorWeight(color, color, 0);
+    float totalWeight = Gaussian_Weight[0];
+    fixed4 totalColor = tex2D(target, uv) * totalWeight;
 
-    float totalWeight = weight0;
-    color *= weight0;
+    float3 _;
+    float depth = GetViewPosAndNormal(uv, _);
+
     UNITY_UNROLL
     for(int i = 1 ; i <= sample ; i++)
     {
-        GetWeightColor(depth, target, uv, dir, texelSize, sharpness, i, totalWeight, color);
-        GetWeightColor(depth, target, uv, -dir, texelSize, sharpness, i, totalWeight, color);
+        GetWeightColor(depth, target, uv, dir, texelSize, sharpness, i, totalWeight, totalColor);
+        GetWeightColor(depth, target, uv, -dir, texelSize, sharpness, i, totalWeight, totalColor);
     }
-    color /= totalWeight;
-    return color;
+
+    totalColor /= totalWeight;
+    return totalColor;
 }
 
 fixed4 BilateralDepth_X(sampler2D target, half2 uv, float2 texelSize, int sample, float sharpness)
